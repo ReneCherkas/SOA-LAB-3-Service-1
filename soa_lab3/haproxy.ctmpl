@@ -1,0 +1,29 @@
+global
+    log stdout format raw local0
+
+defaults
+    timeout connect 3000
+    timeout client  30000
+    timeout server  30000
+    log     global
+    mode    http
+    option  httplog
+
+frontend stats
+    bind *:8404
+    mode http
+    stats uri /
+    stats show-legends
+    stats refresh 10s
+
+frontend http_front
+    mode http
+    bind *:7000
+    default_backend service_backend
+
+backend service_backend
+    mode http
+    balance roundrobin
+{{ range service "service-1" }}
+    server {{ .Node }}-{{ .Port }} {{ .Address }}:{{ .Port }} check
+{{ end }}

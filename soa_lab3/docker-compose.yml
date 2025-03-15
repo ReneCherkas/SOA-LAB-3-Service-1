@@ -1,0 +1,35 @@
+version: "3.8"
+
+services:
+  consul:
+    image: hashicorp/consul:1.14.0
+    container_name: consul
+    ports:
+      - "8500:8500"
+      - "8600:8600/udp"
+    command: agent -dev -client=0.0.0.0
+
+  haproxy:
+    image: haproxy:2.2-alpine
+    container_name: haproxy
+    restart: always
+    volumes:
+      - ./haproxy:/usr/local/etc/haproxy
+    ports:
+      - "7000:7000"
+      - "8404:8404"
+
+  consul-template:
+    image: hashicorp/consul-template:latest
+    container_name: consul-template
+    restart: always
+    user: "0"
+    volumes:
+      - ./haproxy:/usr/local/etc/haproxy
+      - ./haproxy.ctmpl:/templates/haproxy.ctmpl
+    depends_on:
+      - consul
+      - haproxy
+    command: >
+      -consul-addr="http://consul:8500"
+      -template="/templates/haproxy.ctmpl:/usr/local/etc/haproxy/haproxy.cfg:haproxy -f /usr/local/etc/haproxy/haproxy.cfg -sf $(pidof haproxy); sleep 2"
